@@ -190,7 +190,6 @@ class Bucket(object):
     bucket."""
     def __init__(self, name, server):
         self.server = server
-
         self.name = name
         rest = server._rest()
         self.info = rest.get_bucket(self.name)

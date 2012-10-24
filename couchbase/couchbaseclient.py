@@ -23,6 +23,7 @@ import zlib
 import warnings
 import json
 from copy import deepcopy
+import time
 
 import requests
 
@@ -43,6 +44,7 @@ class CommandDispatcher(object):
         #let's reinitialize the config/memcached socket connections ?
         self.queue = Queue(10000)
         self.status = "initialized"
+        self.started_threading = False
         self.vbaware = vbaware
         self.reconfig_callback = self.vbaware.reconfig_vbucket_map
         self.start_connection_callback = self.vbaware.start_vbucket_connection
@@ -53,6 +55,8 @@ class CommandDispatcher(object):
         self._dispatcher_stopped_event = Event()
 
     def put(self, item):
+        if not self.started_threading:
+            self._start_dispatcher()
         try:
             self.queue.put(item, False)
         except Full:
@@ -68,6 +72,13 @@ class CommandDispatcher(object):
 
     def reconfig_completed(self):
         self.status = "ok"
+
+    def _start_dispatcher(self):
+        self.dispatcher_thread = Thread(name="dispatcher-thread",
+                                        target=self.dispatch)
+        self.dispatcher_thread.daemon = True
+        self.dispatcher_thread.start()
+        self.started_threading = True
 
     def dispatch(self):
         while (self.status != "shutdown" or (self.status == "shutdown" and
@@ -333,14 +344,7 @@ class CouchbaseClient(object):
             self.streaming_thread.daemon = True
             self.streaming_thread.start()
         self.dispatcher = dispatcher(self, verbose)
-        self.dispatcher_thread = Thread(name="dispatcher-thread",
-                                        target=self._start_dispatcher)
-        self.dispatcher_thread.daemon = True
-        self.dispatcher_thread.start()
         self.verbose = verbose
-
-    def _start_dispatcher(self):
-        self.dispatcher.dispatch()
 
     def _start_streaming(self):
         # This will dynamically update vBucketMap, vBucketMapFastForward,

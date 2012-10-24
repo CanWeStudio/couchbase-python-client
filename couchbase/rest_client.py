@@ -1051,8 +1051,8 @@ class RestParser(object):
         bucket.port = parsed['proxyPort']
         bucket.authType = parsed["authType"]
         bucket.saslPassword = parsed["saslPassword"]
-        bucket.controllers = parsed['controllers']
-        bucket.ddocs = parsed['ddocs']
+        bucket.controllers = parsed.get('controllers', [])
+        bucket.ddocs = parsed.get('ddocs', '')
         bucket.nodes = list()
         if 'vBucketServerMap' in parsed:
             vBucketServerMap = parsed['vBucketServerMap']
